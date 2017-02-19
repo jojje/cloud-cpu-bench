@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import signal
+import sys
+import re
+from datetime import datetime, timezone
+from statistics import median, mean, stdev, variance
+from subprocess import Popen, PIPE, check_output
+from time import sleep
+
+stop = False
+
+def str_to_floats(line):
+    tokens = re.findall(r'[\d.]+', line.strip())
+    return [float(s) if '.' in s else float(int(s)) for s in tokens]
+
+def run_cmd(args):
+    p = Popen(args, stdout=PIPE)
+    stream = p.stdout
+    line = stream.readline().decode().strip()
+    while line and not stop:
+        print(line)
+        yield str_to_floats(line)
+        line = stream.readline().decode().strip()
+    p.kill()
+    p.communicate()
+
+def percentile(values, fraction):
+    return sorted(values)[int(len(values)*(1 - fraction)):][0]
+    
+def signal_handler(signal, frame):
+    global stop
+    stop = True
+    print("")
+
+def cpuinfo():
+    info = {'processors': 0}
+    with open('/proc/cpuinfo') as f:
+        for line in f.read().split('\n'):
+            line = line.replace('\t','')
+            if line.startswith('processor:'):
+                info['processors'] += 1
+            elif line.startswith('model name:'):
+                info['model'] = line[len('model name:')+1:].strip()
+            elif line.startswith('cpu MHz:'):
+                info['mhz'] = line[len('cpu MHz:')+1:].strip()
+            elif line.startswith('cache size'):
+                info['cache'] = line[len('cache size')+1:].strip()
+            elif line.startswith('bogomips'):
+                info['bogomips'] = line[len('bogomips')+1:].strip()
+    return info
+
+def timestamp():
+    return datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S %z')
+
+def version():
+    return os.getenv('VERSION', 'UNKNOWN')
+
+def bench_version():
+    return os.getenv('STARVE_CHECK_COMMIT', 'UNKNOWN')
+
+def kernel_version():
+    return check_output(['uname', '-a']).decode().strip()
+
+def print_stat(title, value):
+    print('{:12s} {}'.format(title, round(value,4)))
+
+def print_meta(title, value):
+    print('{:12s} {}'.format(title, value))
+
+def print_header(title):
+    print('\n==[ {} ]'.format(title) + '='*(68 - 4 - len(title)))
+    print('')
+
+def print_stats(values, opts):
+    print_header('CPU PERFORMANCE (Mops/cpu)')
+    print_stat('95%', percentile(values, 0.95))
+    print_stat('90%', percentile(values, 0.9))
+    print_stat('Mean', mean(values))
+    print_stat('Median', median(values))
+    print_stat('StDev', stdev(values))
+    print_stat('Variance', variance(values))
+
+    cpu = cpuinfo()
+    print_header('CPU INFO')
+    print_meta('CPUs', cpu['processors'])
+    print_meta('Model', cpu['model'])
+    print_meta('MHz', cpu['mhz'])
+    print_meta('Cache', cpu['cache'])
+    print_meta('BogoMips', cpu['bogomips'])
+
+    print_header('TEST INFO')
+    print_stat('Samples', len(values))
+    print_stat('Threads', opts.threads)
+    print_meta('Generated', timestamp())
+    print_meta('Kernal', kernel_version())
+    print('')
+    print_meta('Version', version())
+    print_meta('Starve-check', bench_version())
+    print('')
+
+def main():
+    desc=('Cloud CPU benchmark. '
+          'Calculates how many millions of operations per second are being '
+          'performed on each CPU on a linux machine. The CPU metrics are '
+          'averaged so that one can gauge per-core scalability and compare '
+          'those figures between cloud providers, and between differently '
+          'sized machines on the same provider, to gain most bang for the '
+          'buck. After sampling completes, variance statistics are provided, '
+          'to highlight how (un)reliable the provider\'s offering is. The '
+          'benchmark program used is the following: '
+          'https://github.com/doug65536/starve-check')
+
+    cpu_count = int(cpuinfo()['processors'])
+
+    parser = argparse.ArgumentParser(
+                 formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+                 prog='cloud-cpu-bench', description=desc)
+
+    parser.add_argument('-t', '--threads', metavar='N', type=int, 
+                        default=cpu_count,
+                        help='Number of threads to use. Defaults the same '
+                             'number as there are "cpus" reported for the '
+                             'system')
+
+    parser.add_argument('-s', '--samples', metavar='N', type=int, default=60,
+                        help='Number of samples to grab during the test '
+                             '(one sample every second). Must be at least '
+                             '2 samples')
+
+    parser.add_argument('--version', action='version', version='%(prog)s {}'.format(version()))
+
+    opts = parser.parse_args()
+
+    if not 1 <= opts.threads <= cpu_count:
+        parser.error('Threads must be between 1 and number of cores ({})'
+                     .format(max_cpu))
+    if opts.samples < 2:
+        parser.error('Number of samples must be > 1')
+
+    signal.signal(signal.SIGINT, signal_handler)
+    sums = []
+    max_samples = opts.samples
+    args = ['starve-check', '-t', str(opts.threads), '-d', '1']
+
+    for i, samples in enumerate(run_cmd(args)):
+        sums.append(mean(samples))
+        if not i+1 < max_samples:
+            global stop
+            stop = True
+
+    if len(sums) > 1:
+        print_stats(sums, opts)
+    else:
+        sys.stderr.write('Too few samples. Need more than 1 to provide stats.\n')
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
+

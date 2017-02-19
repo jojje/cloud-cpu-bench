@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+docker build --build-arg VERSION=`git describe --tags` -t $IMAGE_NAME .
