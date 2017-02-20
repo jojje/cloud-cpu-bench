@@ -33,7 +33,7 @@ This project adds statistics to the test runs, so that it gets easier to:
                          every second). Must be at least 2 samples (default: 60)
       --version          show program's version number and exit
 
-Run a short test on all VCPUs for one minute (60 samples):
+### Run a short test on all VCPUs for one minute (60 samples)
 
     $ docker run --rm jojje/cloud-cpu-bench
 
@@ -68,6 +68,7 @@ Run a short test on all VCPUs for one minute (60 samples):
 
     Version      0.1.0
     Starve-check f14d7ba8152c8e09179fea3f47fd6b3a93f13cae
+
 
 The stats are computed by averaging the number of ops all CPUs process each
 second.  The unit is Mega ops / second and CPU. So for the example above, the

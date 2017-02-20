@@ -12,13 +12,16 @@ RUN apk add --no-cache python3 libstdc++ \
  && mv starve-check /usr/local/bin/ \
  && cd .. \
  && rm -rf src \
- && apk del deps
+ && apk del deps \
+ && find / -name __pycache__ -type d | xargs rm -rf
 
 ARG VERSION
 ENV VERSION=${VERSION:-UNKNOWN}
 
 COPY cpu-stats /usr/local/bin/
 
-RUN adduser -S -D -H user
+RUN adduser -S -D -H user \
+ && cpu-stats --version
+
 USER user
 ENTRYPOINT ["cpu-stats"]
