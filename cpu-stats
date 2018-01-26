@@ -135,7 +135,7 @@ def main():
 
     if not 1 <= opts.threads <= cpu_count:
         parser.error('Threads must be between 1 and number of cores ({})'
-                     .format(max_cpu))
+                     .format(cpu_count))
     if opts.samples < 2:
         parser.error('Number of samples must be > 1')
 
