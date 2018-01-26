@@ -16,7 +16,8 @@ RUN apk add --no-cache python3 libstdc++ \
  && find / -name __pycache__ -type d | xargs rm -rf
 
 ARG VERSION
-ENV VERSION=${VERSION:-UNKNOWN}
+ENV VERSION=${VERSION:-UNKNOWN} \
+    PYTHONUNBUFFERED=1
 
 COPY cpu-stats /usr/local/bin/
 
