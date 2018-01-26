@@ -1,6 +1,8 @@
 # cloud-cpu-bench
 Benchmark script to use for comparing cloud provider CPU performance.
 
+[![](https://img.shields.io/docker/build/jojje/cloud-cpu-bench.svg)](https://hub.docker.com/r/jojje/cloud-cpu-bench/builds/)
+
 The script uses the benchmark program [starve-check][1] by Doug Gale, which performs tight loop computation without waits, to stress the CPU, and counts the number of iteration per unit of time (per second in _this_ project) that each thread managed within that duration.
 
 This project adds statistics to the test runs, so that it gets easier to:
