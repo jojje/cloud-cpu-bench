@@ -5,7 +5,7 @@ import signal
 import sys
 import re
 from datetime import datetime, timezone
-from statistics import median, mean, stdev, variance
+from statistics import median, mean, stdev
 from subprocess import Popen, PIPE, check_output
 from time import sleep
 
@@ -63,8 +63,8 @@ def bench_version():
 def kernel_version():
     return check_output(['uname', '-a']).decode().strip()
 
-def print_stat(title, value):
-    print('{:12s} {}'.format(title, round(value,4)))
+def print_stat(title, value, prec=2):
+    print('{:12s} {}'.format(title, round(value, prec)))
 
 def print_meta(title, value):
     print('{:12s} {}'.format(title, value))
@@ -75,12 +75,12 @@ def print_header(title):
 
 def print_stats(values, opts):
     print_header('CPU PERFORMANCE (Mops/cpu)')
-    print_stat('95%', percentile(values, 0.95))
-    print_stat('90%', percentile(values, 0.9))
+    print_stat('P99', percentile(values, 0.99))
+    print_stat('P95', percentile(values, 0.95))
+    print_stat('P90', percentile(values, 0.9))
     print_stat('Mean', mean(values))
+    print_stat('StDev', stdev(values), prec=3)
     print_stat('Median', median(values))
-    print_stat('StDev', stdev(values))
-    print_stat('Variance', variance(values))
 
     cpu = cpuinfo()
     print_header('CPU INFO')
@@ -124,7 +124,7 @@ def main():
                              'number as there are "cpus" reported for the '
                              'system')
 
-    parser.add_argument('-s', '--samples', metavar='N', type=int, default=60,
+    parser.add_argument('-s', '--samples', metavar='N', type=int, default=100,
                         help='Number of samples to grab during the test '
                              '(one sample every second). Must be at least '
                              '2 samples')

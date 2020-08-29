@@ -32,53 +32,56 @@ This project adds statistics to the test runs, so that it gets easier to:
       -t N, --threads N  Number of threads to use. Defaults the same number as
                          there are "cpus" reported for the system (default: 4)
       -s N, --samples N  Number of samples to grab during the test (one sample
-                         every second). Must be at least 2 samples (default: 60)
+                         every second). Must be at least 2 samples (default: 100)
       --version          show program's version number and exit
 
-### Run a short test on all VCPUs for one minute (60 samples)
+### Run a short test on all cores for one minute 40 seconds (100 samples)
 
     $ docker run --rm jojje/cloud-cpu-bench
 
-    53M    90M    91M    92M
-    55M    95M    95M    96M
+    73M    72M    74M    77M
+    79M    74M    80M    74M
     ...
 
     ==[ CPU PERFORMANCE (Mops/cpu) ]======================================
 
-    95%          81.25
-    90%          82.75
-    Mean         86.7833
-    Median       88.25
-    StDev        3.2824
-    Variance     10.7743
+    P99          63.25
+    P95          65.0
+    P90          66.75
+    Mean         72.55
+    StDev        3.614
+    Median       73.5
 
     ==[ CPU INFO ]========================================================
 
     CPUs         4
-    Model        Intel(R) Core(TM) i5-2500 CPU @ 3.30GHz
-    MHz          3292.677
-    Cache        6144 KB
-    BogoMips     6585.04
+    Model        Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz
+    MHz          2494.138
+    Cache        4096 KB
+    BogoMips     4988.27
 
     ==[ TEST INFO ]=======================================================
 
-    Samples      60
+    Samples      100
     Threads      4
-    Generated    2017-02-19 22:56:18 +0000
-    Kernal       Linux 1437b8d66ba1 4.8.0-36-generic #36~16.04.1-Ubuntu
-                 SMP Sun Feb 5 09:39:57 UTC 2017 x86_64 Linux
+    Generated    2020-08-29 17:26:59 +0000
+    Kernal       Linux 6e1200833bea 5.4.0-42-generic #46-Ubuntu SMP Fri Jul 10 00:24:02 UTC 2020 x86_64 Linux
 
-    Version      0.1.0
+    Version      0.1.3
     Starve-check f14d7ba8152c8e09179fea3f47fd6b3a93f13cae
 
 
 The stats are computed by averaging the number of ops all CPUs process each
-second.  The unit is Mega ops / second and CPU. So for the example above, the
-average number of ops for all VCPUs engaged is the average mean times number of
-threads. I.e. ~86.8 * 4 = 347 Mops/s 
+second. The unit is Mega ops / second and CPU. So for the example above, the
+mean total number of ops per second for all VCPUs engaged is the mean per vcpu
+score times the number of threads. I.e. ~72.55 * 4 = 290 Mop/s
 
-For those who seek guaranteed performance (lowest expected), the percentile
-figure is more relevant.  95% means that 95% of all samples were able to
-perform little over 81 Mops/s.
+For those seeking guaranteed performance (lowest expected), the percentile
+figure is more relevant. P99 means that 99% of all samples were able to
+perform just north of 63 Mop/s.
+
+What this communicates is that this particular vm type may not be suitable
+for workloads that require more than a stable 63 Mop/s, or workloads that are
+sensitive to latency, since the variance is rather high.
 
 [1]: https://github.com/doug65536/starve-check
